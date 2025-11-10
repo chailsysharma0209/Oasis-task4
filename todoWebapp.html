@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Todo Web App</title>
+    <style>
+        :root{
+            --bg:#d5dce8; --card:#aeb4c0; --accent:#6ee7b7; --muted:#9aa4b2; --danger:#ff6b6b;
+            --glass: rgba(255,255,255,0.03);
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color-scheme: dark;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;
+            background:linear-gradient(180deg,#2c1115 0%, #031531 100%);
+            display:flex; align-items:center; justify-content:center;
+            padding:24px;
+            color:#e6eef6;
+            -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+        }
+
+        .app {
+            width:100%;
+            max-width:900px;
+            background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+            border-radius:12px;
+            box-shadow: 0 8px 30px rgba(231, 19, 153, 0.6);
+            overflow:hidden;
+            display:flex; flex-direction:column;
+        }
+
+        header{
+            padding:20px 24px;
+            display:flex; gap:12px; align-items:center; justify-content:space-between;
+            background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent);
+            border-bottom:1px solid rgba(255,255,255,0.02);
+        }
+        .title{
+            display:flex; gap:12px; align-items:center;
+        }
+        .logo{
+            width:44px; height:44px; border-radius:10px;
+            background:linear-gradient(135deg,var(--accent),#00a3ff);
+            display:flex; align-items:center; justify-content:center; font-weight:700;
+            color:#022; box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+            font-size:18px;
+        }
+        h1{font-size:18px; margin:0}
+        p.lead{margin:0; color:var(--muted); font-size:13px}
+
+        .controls{
+            display:flex; gap:10px; align-items:center;
+        }
+        .search{
+            background:var(--glass); border:1px solid rgba(255,255,255,0.03); padding:8px 12px;
+            border-radius:10px; color:inherit; min-width:200px;
+            display:flex; gap:8px; align-items:center;
+        }
+        .search input{ background:transparent; border:0; outline:none; color:inherit; width:140px}
+        .btn{
+            background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            border:1px solid rgba(255,255,255,0.04);
+            padding:8px 12px; border-radius:10px; color:inherit; cursor:pointer;
+            font-size:14px;
+        }
+        .btn.ghost{background:transparent; border:1px dashed rgba(255,255,255,0.03)}
+        .main{
+            padding:18px; display:flex; gap:18px; flex-direction:column;
+        }
+
+        .composer{
+            display:flex; gap:8px; align-items:center;
+        }
+        .composer input[type="text"]{
+            flex:1; padding:12px 14px; background:var(--card); border-radius:10px; border:1px solid rgba(255,255,255,0.02);
+            color:inherit; outline:none; font-size:15px;
+        }
+        .composer .add{
+            min-width:84px;
+        }
+
+        .toolbar{
+            display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+        }
+        .segmented{ display:flex; gap:6px; background:var(--glass); padding:6px; border-radius:10px;}
+        .segmented button{ background:transparent; border:0; padding:8px 10px; border-radius:8px; color:var(--muted); cursor:pointer;}
+        .segmented button.active{ background:rgba(255,255,255,0.03); color:var(--accent); font-weight:600; }
+
+        .list{
+            display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; padding-right:6px;
+        }
+        .todo{
+            display:flex; gap:12px; align-items:center; padding:10px; border-radius:10px;
+            background:linear-gradient(180deg, rgba(0,0,0,0.02), rgba(255,255,255,0.01));
+            border:1px solid rgba(255,255,255,0.02);
+        }
+        .dragger{ cursor:grab; opacity:0.6 }
+        .check{
+            width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+            background:transparent; border:1px solid rgba(255,255,255,0.03);
+        }
+        .check input{ width:18px; height:18px; accent-color:var(--accent); cursor:pointer}
+        .content{ flex:1; min-width:0; display:flex; gap:8px; align-items:center; }
+        .meta{ display:flex; gap:8px; align-items:center; color:var(--muted); font-size:13px; }
+        .titleText{ font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .titleText.completed{ text-decoration:line-through; color:rgba(255,255,255,0.4) }
+
+        .actions{ display:flex; gap:8px; align-items:center; }
+        .small{ font-size:13px; padding:6px 8px; border-radius:8px; }
+
+        footer{
+            display:flex; justify-content:space-between; align-items:center; gap:12px;
+            padding:12px 18px; border-top:1px solid rgba(255,255,255,0.02); background:linear-gradient(180deg, transparent, rgba(0,0,0,0.02));
+        }
+        .muted{ color:var(--muted) }
+        .empty{ padding:32px; text-align:center; color:var(--muted) }
+
+        /* drag placeholder */
+        .dragging{ opacity:0.5 }
+        .placeholder{ border:2px dashed rgba(255,255,255,0.06); border-radius:8px; padding:14px; background:rgba(255,255,255,0.01)}
+        @media (max-width:640px){
+            header{ flex-direction:column; align-items:flex-start; gap:12px }
+            .controls{ width:100%; justify-content:space-between }
+            .search input{ display:none }
+            .composer input{ font-size:14px }
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <header>
+            <div class="title">
+                <div class="logo">TD</div>
+                <div>
+                    <h1>Todo Web App</h1>
+                    <p class="lead">Simple, fast, and saves locally</p>
+                </div>
+            </div>
+
+            <div class="controls" aria-hidden="false">
+                <div class="search" role="search" aria-label="Search todos">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <input id="q" type="search" placeholder="Search" aria-label="Search todos" />
+                </div>
+                <div class="btn ghost" id="importBtn" title="Import JSON">Import</div>
+                <div class="btn ghost" id="exportBtn" title="Export JSON">Export</div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="composer" role="region" aria-label="Add todo">
+                <input id="todoInput" type="text" placeholder="What needs to be done? (press Enter to add)" aria-label="New todo" />
+                <button class="btn add" id="addBtn">Add</button>
+            </div>
+
+            <div class="toolbar" role="toolbar" aria-label="Filters and actions">
+                <div class="segmented" role="tablist" aria-label="Filter todos">
+                    <button class="seg active" data-filter="all" role="tab" aria-selected="true">All</button>
+                    <button class="seg" data-filter="active" role="tab">Active</button>
+                    <button class="seg" data-filter="completed" role="tab">Completed</button>
+                </div>
+
+                <div class="segmented" id="sortSeg" style="margin-left:auto;">
+                    <button class="seg active" data-sort="order">Order</button>
+                    <button class="seg" data-sort="date">Date</button>
+                    <button class="seg" data-sort="alpha">A→Z</button>
+                </div>
+
+                <button class="btn small" id="clearCompleted">Clear completed</button>
+            </div>
+
+            <section id="listRegion" class="list" aria-live="polite" aria-label="Todo list"></section>
+
+            <div id="empty" class="empty" hidden>
+                No todos yet — add something to get started.
+            </div>
+        </main>
+
+        <footer>
+            <div class="muted" id="counts">0 items</div>
+            <div style="display:flex; gap:8px; align-items:center">
+                <div class="muted" id="storageMsg">Saved locally</div>
+            </div>
+        </footer>
+    </div>
+
+    <input id="fileInput" type="file" accept="application/json" style="display:none" />
+
+    <script>
+        // Simple Todo app with localStorage persistence, filters, sorting, inline edit, drag reorder.
+        const STORAGE_KEY = 'todoapp:v1';
+        const listEl = document.getElementById('listRegion');
+        const input = document.getElementById('todoInput');
+        const addBtn = document.getElementById('addBtn');
+        const q = document.getElementById('q');
+        const counts = document.getElementById('counts');
+        const empty = document.getElementById('empty');
+        const clearCompletedBtn = document.getElementById('clearCompleted');
+        const fileInput = document.getElementById('fileInput');
+        const importBtn = document.getElementById('importBtn');
+        const exportBtn = document.getElementById('exportBtn');
+
+        let todos = [];
+        let filter = 'all';
+        let sortMode = 'order'; // order | date | alpha
+        let dragSrcId = null;
+
+        // Utilities
+        const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+        const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify({todos, order:todos.map(t=>t.id)}));
+        const load = () => {
+            try{
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if(!raw) return;
+                const parsed = JSON.parse(raw);
+                if(Array.isArray(parsed.todos)) { todos = parsed.todos; }
+                // migrate: if no order, keep current array order
+            }catch(e){ console.warn('load failed', e) }
+        };
+
+        // Render
+        function render(){
+            listEl.innerHTML = '';
+            let filtered = todos.filter(t=>{
+                if(filter==='active') return !t.done;
+                if(filter==='completed') return t.done;
+                if(q.value.trim()) return t.title.toLowerCase().includes(q.value.trim().toLowerCase());
+                return true;
+            });
+
+            if(sortMode==='date') filtered = filtered.slice().sort((a,b)=>b.created - a.created);
+            if(sortMode==='alpha') filtered = filtered.slice().sort((a,b)=>a.title.localeCompare(b.title));
+            // order: keep current todos array order
+
+            if(filtered.length === 0){
+                empty.hidden = false;
+            } else {
+                empty.hidden = true;
+            }
+
+            filtered.forEach(todo => {
+                const item = document.createElement('div');
+                item.className = 'todo';
+                item.draggable = true;
+                item.dataset.id = todo.id;
+                item.innerHTML = `
+                    <div class="dragger" aria-hidden="true" title="Drag to reorder">⋮⋮</div>
+                    <div class="check"><input type="checkbox" ${todo.done ? 'checked' : ''} aria-label="Mark done"></div>
+                    <div class="content">
+                        <div style="flex:1;min-width:0">
+                            <div class="titleText ${todo.done ? 'completed' : ''}" tabindex="0">${escapeHtml(todo.title)}</div>
+                            <div class="meta">${formatDate(todo.created)} • ${todo.note ? 'has note' : 'no note'}</div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn ghost small edit">Edit</button>
+                            <button class="btn ghost small del" title="Delete">Delete</button>
+                        </div>
+                    </div>
+                `;
+                // events
+                const checkbox = item.querySelector('.check input');
+                const editBtn = item.querySelector('.edit');
+                const delBtn = item.querySelector('.del');
+                const titleEl = item.querySelector('.titleText');
+                const dragger = item.querySelector('.dragger');
+
+                checkbox.addEventListener('change', ()=> {
+                    todo.done = checkbox.checked;
+                    save();
+                    render();
+                });
+
+                delBtn.addEventListener('click', ()=> {
+                    todos = todos.filter(t => t.id !== todo.id);
+                    save(); render();
+                });
+
+                editBtn.addEventListener('click', ()=> startEdit(item, todo));
+                titleEl.addEventListener('dblclick', ()=> startEdit(item, todo));
+                titleEl.addEventListener('keypress', (e)=> {
+                    if(e.key === 'Enter') startEdit(item, todo);
+                });
+
+                // drag events
+                item.addEventListener('dragstart', dragStart);
+                item.addEventListener('dragover', dragOver);
+                item.addEventListener('drop', drop);
+                item.addEventListener('dragend', dragEnd);
+
+                listEl.appendChild(item);
+            });
+
+            counts.textContent = `${todos.filter(t=>!t.done).length} active • ${todos.length} total`;
+        }
+
+        // Editing
+        function startEdit(container, todo){
+            if(container.querySelector('input.editField')) return;
+            const titleDiv = container.querySelector('.titleText');
+            const old = todo.title;
+            const input = document.createElement('input');
+            input.className = 'editField';
+            input.type = 'text';
+            input.value = todo.title;
+            input.style.width = '100%';
+            input.style.padding = '8px';
+            input.style.borderRadius = '6px';
+            input.style.border = '1px solid rgba(255,255,255,0.04)';
+            titleDiv.replaceWith(input);
+            input.focus();
+            input.select();
+
+            function commit(){
+                const val = input.value.trim();
+                if(val){ todo.title = val; }
+                else { /* prevent empty title */ todo.title = old; }
+                save(); render();
+            }
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (e)=>{
+                if(e.key === 'Enter'){ input.blur(); }
+                if(e.key === 'Escape'){ todo.title = old; render(); }
+            });
+        }
+
+        // Add
+        function addTodo(text){
+            const t = {
+                id: uid(),
+                title: text.trim(),
+                created: Date.now(),
+                done: false,
+                note: ''
+            };
+            todos.push(t);
+            save(); render();
+        }
+
+        // Sort/filter handlers
+        document.querySelectorAll('.segmented .seg').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                const parent = btn.parentElement;
+                parent.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));
+                btn.classList.add('active');
+
+                if(parent.id === 'sortSeg' || parent === document.getElementById('sortSeg')){
+                    sortMode = btn.dataset.sort || 'order';
+                } else {
+                    filter = btn.dataset.filter || 'all';
+                }
+                render();
+            });
+        });
+
+        // drag & drop functions
+        function dragStart(e){
+            dragSrcId = this.dataset.id;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', dragSrcId); } catch(_) {}
+        }
+        function dragOver(e){
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const overId = this.dataset.id;
+            if(overId === dragSrcId) return;
+            // visual placeholder
+            const srcEl = listEl.querySelector(`[data-id="${dragSrcId}"]`);
+            if(!srcEl) return;
+            const rect = this.getBoundingClientRect();
+            const after = (e.clientY - rect.top) > (rect.height / 2);
+            if(after) this.after(srcEl);
+            else this.before(srcEl);
+        }
+        function drop(e){
+            e.preventDefault();
+            const fromId = dragSrcId || e.dataTransfer.getData('text/plain');
+            const toId = this.dataset.id;
+            if(!fromId || !toId || fromId === toId) return;
+            // reorder todos array
+            const fromIdx = todos.findIndex(t=>t.id===fromId);
+            const toIdx = todos.findIndex(t=>t.id===toId);
+            if(fromIdx < 0 || toIdx < 0) return;
+            const [item] = todos.splice(fromIdx,1);
+            todos.splice(toIdx, 0, item);
+            save(); render();
+        }
+        function dragEnd(){
+            dragSrcId = null;
+            document.querySelectorAll('.dragging').forEach(n=>n.classList.remove('dragging'));
+        }
+
+        // helpers
+        function formatDate(ts){
+            const d = new Date(ts);
+            return d.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        }
+        function escapeHtml(s){
+            return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+        }
+
+        // Actions
+        addBtn.addEventListener('click', ()=> {
+            const v = input.value.trim();
+            if(!v) return;
+            addTodo(v);
+            input.value = '';
+            input.focus();
+        });
+
+        input.addEventListener('keydown', (e)=>{
+            if(e.key === 'Enter'){ addBtn.click(); }
+        });
+
+        q.addEventListener('input', ()=> render());
+
+        clearCompletedBtn.addEventListener('click', ()=> {
+            todos = todos.filter(t=>!t.done);
+            save(); render();
+        });
+
+        // Import/Export
+        importBtn.addEventListener('click', ()=> fileInput.click());
+        fileInput.addEventListener('change', async (e)=>{
+            const f = e.target.files[0];
+            if(!f) return;
+            try{
+                const txt = await f.text();
+                const obj = JSON.parse(txt);
+                if(Array.isArray(obj.todos)) { todos = obj.todos; save(); render(); }
+                else if(Array.isArray(obj)) { todos = obj; save(); render(); }
+            }catch(err){ alert('Import failed: ' + err.message); }
+            fileInput.value = '';
+        });
+
+        exportBtn.addEventListener('click', ()=>{
+            const blob = new Blob([JSON.stringify({todos}, null, 2)], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'todos.json';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        });
+
+        // keyboard shortcuts
+        document.addEventListener('keydown', (e)=>{
+            if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); q.focus(); }
+            if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); input.focus(); }
+        });
+
+        // initial load
+        load();
+        render();
+
+        // expose simple API for dev console
+        window.todoApp = {
+            get: ()=>todos,
+            add: (t)=>{ addTodo(t); },
+            clear: ()=>{ todos=[]; save(); render(); }
+        };
+    </script>
+</body>
+</html>
